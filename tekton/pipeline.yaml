@@ -1,0 +1,39 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: ci-cd-pipeline
+spec:
+  params:
+    - name: IMAGE
+      type: string
+      default: "docker.io/aramos20/myapi:latest"
+  workspaces:
+    - name: shared-workspace
+  tasks:
+    - name: clone-repo
+      taskRef:
+        name: git-clone-task
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+
+    - name: build-and-push
+      runAfter:
+        - clone-repo
+      taskRef:
+        name: build-and-push-task
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+      params:
+        - name: IMAGE
+          value: $(params.IMAGE)
+
+    - name: deploy
+      runAfter:
+        - build-and-push
+      taskRef:
+        name: deploy-task
+      workspaces:
+        - name: source
+          workspace: shared-workspace
