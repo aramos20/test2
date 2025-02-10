@@ -1,0 +1,78 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: git-clone-task
+spec:
+  params:
+    - name: url
+      type: string
+      default: "https://github.com/aramos20/test2.git"
+    - name: revision
+      type: string
+      default: "main"
+  workspaces:
+    - name: output
+      mountPath: /workspace
+  steps:
+    - name: clone
+      image: alpine/git:latest
+      workingDir: /workspace
+      script: |
+        #!/bin/sh
+        set -e
+        rm -rf /workspace/* /workspace/.[!.]*
+        git clone $(params.url) .
+        git checkout $(params.revision)
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: build-and-push-task
+spec:
+  params:
+    - name: image
+      type: string
+      default: "docker.io/aramos20/myapy.latest"
+  workspaces:
+    - name: source
+      mountPath: /workspace
+  steps:
+    - name: kaniko-build-and-push
+      image: gcr.io/kaniko-project/executor:debug
+      workingDir: /workspace
+      command:
+        - /kaniko/executor
+      args:
+        - --dockerfile=Dockerfile
+        - --context=/workspace
+        - --destination=$(params.image)
+      volumeMounts:
+        - name: kaniko-secret
+          mountPath: /kaniko/.docker
+  volumes:
+    - name: kaniko-secret
+      secret:
+        secretName: regcred
+        items:
+          - key: .dockerconfigjson
+            path: config.json
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: deploy-task
+spec:
+  workspaces:
+    - name: source
+      mountPath: /workspace
+  steps:
+    - name: deploy
+      image: bitname/kubectl:latest
+      workingDir: /workspace
+      script: |
+        #!/bin/sh
+        set -e
+        kubectl apply -f k8s/confimap.yaml
+        kubectl apply -f k8s/postgres.yaml
+        kubectl apply -f k8s/backend.yaml
+        kubectl apply -f k8s/frontend.yaml
