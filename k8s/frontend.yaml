@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-files
+data:
+  index.html: |
+    <html>
+      <head>
+        <title>My Frontend</title>
+      </head>
+      <body>
+        <script>
+          fetch('http://127.0.0.1:30007/visits')
+            .then(response => response.json())
+            .then(data => {
+              document.body.innerHTML += `<p>${data.message} - Visitas: ${data.visits} - Modo: ${data.mode}</p>`;
+            });
+        </script>
+      </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: frontend
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: frontend
+        environment: release
+    spec:
+      containers:
+      - image: nginx:alpine
+        name: frontend
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+          - containerPort: 80
+        volumeMounts:
+          - name: static-files
+            mountPath: /usr/share/nginx/html
+      volumes:
+          - name: static-files
+            configMap:
+              name: frontend-files
+              items:
+                - key: index.html
+                  path: index.html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+      nodePort: 30010
+  type: NodePort

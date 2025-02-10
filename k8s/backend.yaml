@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: backend
+  name: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: backend
+    spec:
+      containers:
+      - image: docker.io/aramos20/myapi:latest
+        name: myapi
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+          - containerPort: 5000
+        env:
+          - name: DB_PASS
+            valueFrom:
+              secretKeyRef:
+                name: db-credentials
+                key: DB_PASS
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: db-config
+                key: DB_HOST
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: db-config
+                key: DB_NAME
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: db-config
+                key: DB_USER
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: backend
+  ports:
+    - name: backend
+      protocol: TCP
+      port: 5000
+      targetPort: 5000
+      nodePort: 30007
+  type: NodePort
+status: {}

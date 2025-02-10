@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-pod
+spec:
+  containers:
+    - name: debugger
+      image: busybox
+      command: ["sleep", "3600"]
+      volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+  volumes:
+    - name: workspace
+      persistentVolumeClaim:
+        claimName: tekton-pvc
