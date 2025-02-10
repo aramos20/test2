@@ -32,7 +32,7 @@ spec:
   params:
     - name: image
       type: string
-      default: "docker.io/aramos20/myapy.latest"
+      default: "docker.io/aramos20/myapy:latest"
   workspaces:
     - name: source
       mountPath: /workspace
